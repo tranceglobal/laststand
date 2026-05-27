@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>LastStand</title>
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0c10;--surface:#111318;--surface2:#191d24;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
+  --amber:#f5a623;--amber-dim:rgba(245,166,35,0.12);
+  --green:#22c55e;--green-dim:rgba(34,197,94,0.1);
+  --red:#ef4444;--red-dim:rgba(239,68,68,0.1);
+  --blue:#3b82f6;--blue-dim:rgba(59,130,246,0.1);
+  --muted:#6b7280;--text:#e5e7eb;--text2:#9ca3af;
+  --font-mono:'Share Tech Mono',monospace;
+  --font:'Barlow',sans-serif;
+  --font-display:'Barlow Condensed',sans-serif;
+  --radius:10px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;padding:12px}
+
+/* ---- App shell ---- */
+.app{max-width:700px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+
+/* ---- Header ---- */
+.header{display:flex;align-items:center;justify-content:space-between;padding:8px 0 4px;gap:8px;flex-wrap:nowrap}
+.brand{font-family:var(--font-display);font-size:20px;font-weight:800;letter-spacing:2px;color:var(--amber);text-transform:uppercase;white-space:nowrap;flex-shrink:0}
+.brand-sub{color:var(--text2);font-weight:400;font-size:12px;letter-spacing:0;margin-left:6px;text-transform:none;font-family:var(--font)}
+.header-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
+
+/* ---- Badges ---- */
+.badge{font-size:11px;padding:5px 10px;border-radius:20px;font-weight:600;letter-spacing:0.5px;white-space:nowrap}
+.badge-bsc{background:rgba(243,186,47,0.15);color:#f3ba2f;border:1px solid rgba(243,186,47,0.3)}
+
+/* ---- Buttons (min 44px touch target) ---- */
+.btn{font-family:var(--font);font-size:13px;font-weight:600;padding:0 16px;height:44px;border-radius:8px;border:none;cursor:pointer;transition:all .15s;letter-spacing:0.3px;display:inline-flex;align-items:center;justify-content:center;gap:6px;-webkit-appearance:none;appearance:none;touch-action:manipulation}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn:active:not(:disabled){transform:scale(0.97)}
+.btn-wallet{background:var(--blue);color:#fff;font-size:12px;padding:0 12px;height:40px}
+.btn-wallet:hover:not(:disabled){background:#2563eb}
+.btn-switch{background:var(--amber);color:#000;font-size:12px;padding:0 10px;height:36px}
+.btn-primary{background:var(--amber);color:#000;font-size:15px;width:100%;height:52px;border-radius:10px;font-weight:700}
+.btn-primary:hover:not(:disabled){background:#e59920}
+.btn-approve{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(59,130,246,0.3);font-size:15px;width:100%;height:52px;border-radius:10px}
+.btn-approve:hover:not(:disabled){background:rgba(59,130,246,0.2)}
+.btn-claim{background:var(--green);color:#000;font-size:16px;width:100%;height:56px;border-radius:10px;font-weight:700}
+.btn-claim:hover:not(:disabled){background:#16a34a}
+.btn-sm{font-size:12px;padding:0 14px;height:38px;background:var(--surface2);color:var(--text2);border:1px solid var(--border2);border-radius:7px;flex-shrink:0}
+.btn-sm:hover{color:var(--text)}
+
+/* ---- Cards ---- */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.card-label{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+
+/* ---- Hero ---- */
+.hero{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 16px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% -20%,rgba(245,166,35,0.08) 0%,transparent 70%);pointer-events:none}
+.round-tag{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+.timer-wrap{text-align:center;margin:6px 0 18px}
+/* clamp: 40px on 320px screen, scales up to 56px on wide screens */
+.timer{font-family:var(--font-mono);font-size:clamp(40px,12vw,56px);font-weight:400;color:var(--amber);letter-spacing:clamp(2px,1vw,4px);line-height:1;text-shadow:0 0 40px rgba(245,166,35,0.3)}
+.timer.expired{color:var(--red);text-shadow:0 0 40px rgba(239,68,68,0.3);animation:pulse 1.5s ease-in-out infinite}
+.timer-sub{font-size:11px;color:var(--muted);margin-top:6px;letter-spacing:1px;text-transform:uppercase}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.hero-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.hero-stat{background:var(--surface2);border-radius:8px;padding:10px 12px}
+.hero-stat .lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.hero-stat .val{font-family:var(--font-mono);font-size:clamp(12px,3vw,15px);color:var(--text);word-break:break-all;line-height:1.3}
+.hero-stat .val.green{color:var(--green)}
+.hero-stat .val.amber{color:var(--amber)}
+
+/* ---- 2-col grid → single col on mobile ---- */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* ---- Deposit card ---- */
+.field{margin-bottom:12px}
+.field label{display:block;font-size:12px;color:var(--text2);margin-bottom:5px;font-weight:500}
+/* font-size 16px prevents iOS auto-zoom on focus */
+.field input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:0 12px;height:48px;color:var(--text);font-size:16px;font-family:var(--font-mono);outline:none;transition:border-color .15s;-webkit-appearance:none;appearance:none}
+.field input:focus{border-color:rgba(245,166,35,0.5)}
+.field input::placeholder{color:var(--muted);font-size:14px}
+.balance-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text2);margin-bottom:12px;gap:8px}
+.balance-row span{font-family:var(--font-mono);color:var(--text)}
+.slip-row{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.slip-btn{font-size:13px;padding:0 14px;height:40px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;transition:all .15s;font-family:var(--font);touch-action:manipulation;-webkit-appearance:none;appearance:none}
+.slip-btn.active{background:var(--amber-dim);border-color:var(--amber);color:var(--amber)}
+.required-row{background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+.required-row .lbl{font-size:12px;color:var(--text2);margin-bottom:3px}
+.required-row .val{font-family:var(--font-mono);font-size:16px;color:var(--text);font-weight:500}
+.required-row .usd{font-size:11px;color:var(--muted);text-align:right}
+
+/* ---- Burn tracker ---- */
+.burn-pct{font-family:var(--font-display);font-size:clamp(36px,10vw,48px);font-weight:800;line-height:1}
+.burn-low{color:var(--amber)}
+.burn-mid{color:#f97316}
+.burn-high{color:var(--red)}
+.progress-wrap{margin:12px 0;background:var(--surface2);border-radius:100px;height:8px;overflow:hidden}
+.progress-fill{height:100%;border-radius:100px;transition:width .5s ease;background:linear-gradient(90deg,var(--amber),var(--red))}
+.burn-legend{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px}
+.burn-steps{display:flex;flex-direction:column;gap:4px;margin-top:12px}
+.burn-step{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:8px 10px;border-radius:6px;background:var(--surface2)}
+.burn-step .step-pct{font-family:var(--font-mono);font-weight:600}
+.burn-step .step-usd{color:var(--muted)}
+.burn-step.active{background:var(--amber-dim);border:1px solid rgba(245,166,35,0.2)}
+.burn-step.active .step-pct{color:var(--amber)}
+
+/* ---- Claim banner ---- */
+.claim-banner{background:linear-gradient(135deg,rgba(34,197,94,0.08),rgba(34,197,94,0.04));border:1px solid rgba(34,197,94,0.25);border-radius:12px;padding:20px 16px;text-align:center}
+.claim-title{font-family:var(--font-display);font-size:clamp(22px,6vw,28px);font-weight:800;color:var(--green);letter-spacing:1px;margin-bottom:6px}
+.claim-sub{font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.5}
+.claim-winner{font-family:var(--font-mono);font-size:13px;color:var(--green);margin-bottom:14px;background:var(--green-dim);padding:8px 14px;border-radius:6px;display:inline-block}
+.claim-pot{font-family:var(--font-mono);font-size:clamp(18px,5vw,22px);color:var(--green);font-weight:400}
+
+/* ---- User stats ---- */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.stat-box{background:var(--surface2);border-radius:8px;padding:12px}
+.stat-box .lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.stat-box .val{font-family:var(--font-mono);font-size:13px;color:var(--text);word-break:break-all}
+.ref-box{background:var(--surface2);border-radius:8px;padding:12px;display:flex;align-items:center;gap:8px}
+.ref-link{font-family:var(--font-mono);font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+
+/* ---- Toast — bottom-center on mobile ---- */
+.toast-wrap{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:1000;display:flex;flex-direction:column;gap:8px;align-items:center;width:calc(100% - 32px);max-width:360px;pointer-events:none}
+.toast{background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:12px 16px;font-size:13px;width:100%;animation:slide-up .2s ease;display:flex;align-items:flex-start;gap:8px;pointer-events:auto;line-height:1.4}
+.toast.success{border-color:rgba(34,197,94,0.4);color:var(--green)}
+.toast.error{border-color:rgba(239,68,68,0.4);color:var(--red)}
+.toast.info{border-color:rgba(59,130,246,0.4);color:var(--blue)}
+@keyframes slide-up{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}
+
+/* ---- Connect overlay ---- */
+.connect-overlay{text-align:center;padding:40px 16px}
+.connect-overlay h2{font-family:var(--font-display);font-size:clamp(28px,8vw,36px);font-weight:800;color:var(--amber);letter-spacing:2px;margin-bottom:8px}
+.connect-overlay p{color:var(--text2);font-size:14px;margin-bottom:24px;line-height:1.6}
+.connect-overlay .btn{display:flex;margin:0 auto;width:fit-content}
+
+/* ---- Misc ---- */
+.verified{display:inline-flex;align-items:center;gap:4px;font-size:11px;background:var(--green-dim);color:var(--green);padding:3px 8px;border-radius:20px;font-weight:600}
+.loader{display:inline-block;width:15px;height:15px;border:2px solid rgba(255,255,255,0.2);border-top-color:currentColor;border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ---- Responsive: ≤520px portrait phones ---- */
+@media(max-width:520px){
+  .grid2{grid-template-columns:1fr}
+  .brand-sub{display:none}
+  .hero-grid{grid-template-columns:1fr 1fr;/* 2 cols; price goes full width below */}
+  /* Make last hero-stat span full width */
+  .hero-stat:last-child{grid-column:1/-1}
+  .toast-wrap{bottom:12px;width:calc(100% - 24px)}
+}
+
+/* ---- Responsive: ≤360px very small phones ---- */
+@media(max-width:360px){
+  body{padding:8px}
+  .brand{font-size:18px}
+  .btn-wallet{font-size:11px;padding:0 8px;height:36px}
+  .hero{padding:16px 12px}
+  .card{padding:14px 12px}
+  .hero-grid{grid-template-columns:1fr 1fr}
+  .stats-grid{grid-template-columns:1fr}
+  .slip-btn{padding:0 10px;height:38px;font-size:12px}
+}
+</style>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<div class="app">
+  <div class="header">
+    <div class="brand">LastStand<span class="brand-sub">BSC Game</span></div>
+    <div class="header-right">
+      <div id="net-badge"></div>
+      <button class="btn btn-wallet" id="wallet-btn" onclick="connectWallet()">Connect Wallet</button>
+    </div>
+  </div>
+
+  <div id="main-content">
+    <div class="connect-overlay">
+      <h2>LAST STAND</h2>
+      <p>Last depositor wins the entire pot.<br>Every deposit resets the 30‑minute timer.</p>
+      <button class="btn btn-wallet" onclick="connectWallet()">Connect Wallet to Play</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const CONTRACT_ADDRESS = "0xca2cdB3c76661e2210dCd6B1aF5E7B4bcc1a82D9";
+const KAVI_ADDRESS     = "0x69A8D3EbE5532dcDcD719a16346BAF89c7A5D02F";
+const BSC_CHAIN_ID     = 56;
+const BSC_RPC          = "https://bsc-dataseed1.binance.org/";
+
+const CONTRACT_ABI = [
+  "function getGameStatus() view returns (bool active,uint256 currentGameId,address currentLastDepositor,uint256 potSize,uint256 timerExpiresAt,uint256 secondsLeft,uint256 kaviPriceUSD,uint256 requiredKaviDeposit)",
+  "function getBurnStatus() view returns (uint256 currentBurnPct,uint256 roundUSDDeposited,uint256 depositCount,uint256 nextThresholdUSD)",
+  "function getUserInfo(address user) view returns (address userReferrer,bool isVerifiedDepositor,uint256 deposited,uint256 claimed)",
+  "function isClaimPending() view returns (bool)",
+  "function deposit(address referrer,uint256 maxKaviIn) external",
+  "function claimPot() external",
+  "function kaviDecimals() view returns (uint8)",
+];
+const KAVI_ABI = [
+  "function approve(address spender,uint256 amount) returns (bool)",
+  "function allowance(address owner,address spender) view returns (uint256)",
+  "function balanceOf(address account) view returns (uint256)",
+  "function decimals() view returns (uint8)",
+];
+
+let E;
+let provider, signer, userAddr, chainId;
+let readProvider, readContract, readKaviContract;
+let contract, kaviContract;
+let kaviDec = 18;
+let game = {}, burn = {}, user = {};
+let kaviBalance = null, kaviAllowance = null;
+let slippage = 2, referrerInput = "";
+let polling = null, timerTick = null, localSecondsLeft = 0;
+
+/* ---- Helpers ---- */
+const short = a => (!a || a === "0x0000000000000000000000000000000000000000") ? "—" : a.slice(0,6)+"..."+a.slice(-4);
+const fmtKavi = bn => { try{ return parseFloat(E.utils.formatUnits(bn,kaviDec)).toFixed(4); }catch{ return "—"; } };
+function fmtTimer(s){
+  if(s<=0) return "00:00";
+  const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=s%60;
+  const p=n=>String(n).padStart(2,"0");
+  return h>0 ? `${p(h)}:${p(m)}:${p(sec)}` : `${p(m)}:${p(sec)}`;
+}
+function toast(msg,type="info",dur=4000){
+  const el=document.createElement("div");
+  el.className=`toast ${type}`;
+  el.innerHTML=`<span>${msg}</span>`;
+  document.getElementById("toasts").appendChild(el);
+  setTimeout(()=>el.remove(),dur);
+}
+function errMsg(e){
+  const m=e?.reason||e?.message||"";
+  if(m.includes("NoLiquidity"))      return "Pool has no liquidity";
+  if(m.includes("RoundExpired"))     return "Timer expired — settle current round first";
+  if(m.includes("TimerRunning"))     return "Timer is still running";
+  if(m.includes("PotEmpty"))         return "No active game or pot is empty";
+  if(m.includes("SlippageExceeded")) return "Price moved — raise slippage or retry";
+  if(m.includes("DepositZero"))      return "Deposit amount is zero — check pool";
+  if(m.includes("user rejected"))    return "Transaction rejected";
+  if(m.includes("insufficient"))     return "Insufficient BNB for gas";
+  return m.slice(0,80)||"Transaction failed";
+}
+
+/* ---- Init ---- */
+function waitEthers(cb){ window.ethers ? (E=window.ethers,cb()) : setTimeout(()=>waitEthers(cb),80); }
+window.addEventListener("load",()=>waitEthers(setup));
+
+function setup(){
+  readProvider    = new E.providers.JsonRpcProvider(BSC_RPC);
+  readContract    = new E.Contract(CONTRACT_ADDRESS,CONTRACT_ABI,readProvider);
+  readKaviContract= new E.Contract(KAVI_ADDRESS,KAVI_ABI,readProvider);
+  detectRef(); loadReadData(); startPolling();
+}
+function detectRef(){
+  const ref=new URLSearchParams(window.location.search).get("ref")||"";
+  if(ref && E.utils.isAddress(ref)) referrerInput=ref;
+}
+
+/* ---- Wallet ---- */
+async function connectWallet(){
+  if(!window.ethereum){ toast("MetaMask / wallet not found.","error"); return; }
+  try{
+    await window.ethereum.request({method:"eth_requestAccounts"});
+    provider = new E.providers.Web3Provider(window.ethereum);
+    signer   = provider.getSigner();
+    userAddr = await signer.getAddress();
+    chainId  = (await provider.getNetwork()).chainId;
+    contract     = new E.Contract(CONTRACT_ADDRESS,CONTRACT_ABI,signer);
+    kaviContract = new E.Contract(KAVI_ADDRESS,KAVI_ABI,signer);
+    kaviDec = await readKaviContract.decimals();
+    updateWalletUI();
+    if(chainId===BSC_CHAIN_ID) await loadUserData();
+    toast("Connected: "+short(userAddr),"success");
+    window.ethereum.on("accountsChanged",()=>location.reload());
+    window.ethereum.on("chainChanged",()=>location.reload());
+  }catch(e){ toast(errMsg(e),"error"); }
+}
+async function switchBSC(){
+  try{
+    await window.ethereum.request({method:"wallet_switchEthereumChain",params:[{chainId:"0x38"}]});
+  }catch(e){
+    if(e.code===4902) await window.ethereum.request({
+      method:"wallet_addEthereumChain",
+      params:[{chainId:"0x38",chainName:"BNB Smart Chain",nativeCurrency:{name:"BNB",symbol:"BNB",decimals:18},rpcUrls:["https://bsc-dataseed.binance.org/"],blockExplorerUrls:["https://bscscan.com/"]}]
+    });
+  }
+}
+function updateWalletUI(){
+  const btn=document.getElementById("wallet-btn");
+  const badge=document.getElementById("net-badge");
+  if(userAddr){
+    btn.textContent=short(userAddr);
+    btn.onclick=null;
+    btn.style.cssText="background:var(--surface2);color:var(--text2);border:1px solid var(--border2);font-size:12px;padding:0 10px;height:38px";
+  }
+  if(chainId===BSC_CHAIN_ID)
+    badge.innerHTML=`<div class="badge badge-bsc">BSC ✓</div>`;
+  else if(chainId)
+    badge.innerHTML=`<button class="btn btn-switch" onclick="switchBSC()">Switch to BSC</button>`;
+}
+
+/* ---- Data ---- */
+async function loadReadData(){
+  try{
+    kaviDec = await readKaviContract.decimals();
+    const [gs,bs] = await Promise.all([readContract.getGameStatus(),readContract.getBurnStatus()]);
+    game={
+      active:gs.active, gameId:gs.currentGameId.toNumber(),
+      lastDepositor:gs.currentLastDepositor, potSize:gs.potSize,
+      timerExpiresAt:gs.timerExpiresAt.toNumber(),
+      secondsLeft:gs.secondsLeft.toNumber(),
+      kaviPriceUSD:gs.kaviPriceUSD, requiredKaviDeposit:gs.requiredKaviDeposit,
+    };
+    burn={
+      pct:bs.currentBurnPct.toNumber(), roundUSD:bs.roundUSDDeposited,
+      depositCount:bs.depositCount.toNumber(), nextThresholdUSD:bs.nextThresholdUSD,
+    };
+    localSecondsLeft=game.secondsLeft;
+    renderAll();
+  }catch(e){ console.error(e); renderAll(); }
+}
+async function loadUserData(){
+  if(!userAddr||chainId!==BSC_CHAIN_ID) return;
+  try{
+    const [ui,bal,alw]=await Promise.all([
+      readContract.getUserInfo(userAddr),
+      readKaviContract.balanceOf(userAddr),
+      readKaviContract.allowance(userAddr,CONTRACT_ADDRESS),
+    ]);
+    user={referrer:ui.userReferrer,verified:ui.isVerifiedDepositor,deposited:ui.deposited,claimed:ui.claimed};
+    kaviBalance=bal; kaviAllowance=alw;
+    renderAll();
+  }catch(e){ console.error(e); }
+}
+function startPolling(){
+  clearInterval(polling); clearInterval(timerTick);
+  polling=setInterval(()=>{ loadReadData(); if(userAddr&&chainId===BSC_CHAIN_ID) loadUserData(); },8000);
+  timerTick=setInterval(()=>{
+    if(game.active&&localSecondsLeft>0){
+      localSecondsLeft--;
+      const el=document.getElementById("timer-display");
+      if(el){
+        el.textContent=fmtTimer(localSecondsLeft);
+        if(localSecondsLeft===0){ el.className="timer expired"; loadReadData(); }
+      }
+    }
+  },1000);
+}
+
+/* ---- Render ---- */
+function renderAll(){
+  updateWalletUI();
+  const connected=!!userAddr&&chainId===BSC_CHAIN_ID;
+  document.getElementById("main-content").innerHTML=
+    renderHero()+
+    (game.active&&localSecondsLeft<=0 ? renderClaim() : "")+
+    `<div class="grid2">${renderDeposit(connected)}${renderBurn()}</div>`+
+    (connected ? renderUserStats() : "");
+}
+
+function renderHero(){
+  const expired=game.active&&localSecondsLeft<=0;
+  const price=game.kaviPriceUSD ? parseFloat(E.utils.formatUnits(game.kaviPriceUSD,18)).toFixed(6):"—";
+  const pot=game.potSize ? fmtKavi(game.potSize):"0.0000";
+  const potUSD=game.potSize&&game.kaviPriceUSD
+    ? "$"+(parseFloat(E.utils.formatUnits(game.potSize,kaviDec))*parseFloat(E.utils.formatUnits(game.kaviPriceUSD,18))).toFixed(2):"";
+  return `
+  <div class="hero">
+    <div class="round-tag">${game.active?`⚔ ROUND #${game.gameId} — LIVE`:game.gameId>0?`ROUND #${game.gameId} ENDED`:"NO ACTIVE ROUND"}</div>
+    <div class="timer-wrap">
+      <div id="timer-display" class="timer ${expired?"expired":""}">${game.active?fmtTimer(localSecondsLeft):"--:--"}</div>
+      <div class="timer-sub">${expired?"⚠ TIMER EXPIRED — AWAITING CLAIM":game.active?"time remaining":"deposit to start a new round"}</div>
+    </div>
+    <div class="hero-grid">
+      <div class="hero-stat"><div class="lbl">Pot Size</div><div class="val green">${pot}<br><span style="font-size:11px;color:var(--muted)">${potUSD}</span></div></div>
+      <div class="hero-stat"><div class="lbl">Last Depositor</div><div class="val">${short(game.lastDepositor)}</div></div>
+      <div class="hero-stat"><div class="lbl">KAVI Price</div><div class="val amber">$${price}</div></div>
+    </div>
+  </div>`;
+}
+
+function renderClaim(){
+  const pot=game.potSize?fmtKavi(game.potSize):"0";
+  const isWinner=userAddr&&game.lastDepositor&&userAddr.toLowerCase()===game.lastDepositor.toLowerCase();
+  return `
+  <div class="claim-banner">
+    <div class="claim-title">${isWinner?"🏆 YOU WIN!":"⏰ ROUND OVER"}</div>
+    <div class="claim-sub">${isWinner?"You are the last depositor! Claim your winnings.":"Timer expired. Anyone can trigger the payout."}</div>
+    <div class="claim-winner">Winner: ${short(game.lastDepositor)}</div><br>
+    <div class="claim-pot">${pot} KAVI</div>
+    <br>
+    <button class="btn btn-claim" id="claim-btn" onclick="handleClaim()">
+      <span id="claim-loader"></span>${isWinner?"CLAIM MY POT":"TRIGGER PAYOUT"}
+    </button>
+  </div>`;
+}
+
+function renderDeposit(connected){
+  const req=game.requiredKaviDeposit?fmtKavi(game.requiredKaviDeposit):"—";
+  const bal=kaviBalance?fmtKavi(kaviBalance):"—";
+  const needsApproval=connected&&kaviAllowance&&game.requiredKaviDeposit&&kaviAllowance.lt(game.requiredKaviDeposit);
+  const hasBalance=connected&&kaviBalance&&game.requiredKaviDeposit&&kaviBalance.gte(game.requiredKaviDeposit);
+  const expired=game.active&&localSecondsLeft<=0;
+  return `
+  <div class="card">
+    <div class="card-label">Deposit — $0.50</div>
+    <div class="required-row">
+      <div><div class="lbl">Required KAVI</div><div class="val">${req}</div></div>
+      <div class="usd">≈ $0.50<br>live price</div>
+    </div>
+    ${connected?`<div class="balance-row"><span>Your KAVI Balance</span><span>${bal}</span></div>`:""}
+    <div class="field">
+      <label>Referrer <span style="color:var(--muted)">(optional)</span></label>
+      <input type="text" id="ref-input" placeholder="0x..." value="${referrerInput}" oninput="referrerInput=this.value" autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+    <div style="margin-bottom:12px">
+      <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px;font-weight:500">Slippage</label>
+      <div class="slip-row">
+        ${[0,1,2,5].map(s=>`<button class="slip-btn ${slippage===s?"active":""}" onclick="setSlippage(${s})">${s===0?"Auto":s+"%"}</button>`).join("")}
+      </div>
+    </div>
+    ${!connected
+      ?`<button class="btn btn-primary" onclick="connectWallet()">Connect Wallet</button>`
+      :expired
+        ?`<button class="btn btn-primary" disabled>Settle Round First</button>`
+        :needsApproval
+          ?`<button class="btn btn-approve" id="approve-btn" onclick="handleApprove()"><span id="approve-loader"></span>Approve KAVI</button>`
+          :`<button class="btn btn-primary" id="deposit-btn" onclick="handleDeposit()" ${!hasBalance?"disabled":""}>
+              <span id="deposit-loader"></span>${!hasBalance?"Insufficient KAVI":"DEPOSIT NOW"}
+            </button>`
+    }
+  </div>`;
+}
+
+function renderBurn(){
+  const pct=burn.pct||5;
+  const roundUSD=burn.roundUSD?parseFloat(E.utils.formatUnits(burn.roundUSD,18)):0;
+  const nextUSD=burn.nextThresholdUSD&&!burn.nextThresholdUSD.isZero()?parseFloat(E.utils.formatUnits(burn.nextThresholdUSD,18)):null;
+  const progress=nextUSD?Math.min((roundUSD/nextUSD)*100,100):(roundUSD>=500?100:(roundUSD/500)*100);
+  const cls=pct<=5?"burn-low":pct<=10?"burn-mid":"burn-high";
+  const steps=[{usd:0,pct:5},{usd:500,pct:6},{usd:600,pct:7},{usd:700,pct:8},{usd:800,pct:9},{usd:1000,pct:10}];
+  return `
+  <div class="card">
+    <div class="card-label">🔥 Burn Escalation</div>
+    <div class="burn-pct ${cls}">${pct}<span style="font-size:20px;font-weight:400">%</span></div>
+    <div style="font-size:12px;color:var(--muted);margin-top:2px">current burn rate</div>
+    <div class="progress-wrap"><div class="progress-fill" style="width:${progress.toFixed(1)}%"></div></div>
+    <div class="burn-legend"><span>$${roundUSD.toFixed(0)} deposited</span><span>${nextUSD?"next: $"+nextUSD.toFixed(0):"MAX BURN"}</span></div>
+    <div class="burn-steps">
+      ${steps.map(st=>`
+        <div class="burn-step ${pct===st.pct?"active":""}">
+          <span class="step-pct">${st.pct}% burn</span>
+          <span class="step-usd">from $${st.usd}</span>
+        </div>`).join("")}
+    </div>
+    <div style="margin-top:10px;font-size:11px;color:var(--muted)">
+      Deposits this round: <span style="color:var(--text);font-family:var(--font-mono)">${burn.depositCount||0}</span>
+    </div>
+  </div>`;
+}
+
+function renderUserStats(){
+  if(!userAddr) return "";
+  const dep=user.deposited?fmtKavi(user.deposited):"0.0000";
+  const won=user.claimed?fmtKavi(user.claimed):"0.0000";
+  const myRef=user.referrer&&user.referrer!=="0x0000000000000000000000000000000000000000"?short(user.referrer):"None";
+  const refLink=`${window.location.href.split("?")[0]}?ref=${userAddr}`;
+  return `
+  <div class="card">
+    <div class="card-label">My Stats</div>
+    <div class="stats-grid">
+      <div class="stat-box"><div class="lbl">Total Deposited</div><div class="val">${dep} KAVI</div></div>
+      <div class="stat-box"><div class="lbl">Total Won</div><div class="val" style="color:var(--green)">${won} KAVI</div></div>
+      <div class="stat-box"><div class="lbl">My Referrer</div><div class="val">${myRef}</div></div>
+      <div class="stat-box"><div class="lbl">Status</div><div class="val">${user.verified?'<span class="verified">✓ Verified</span>':'<span style="color:var(--muted);font-size:11px">Deposit to unlock</span>'}</div></div>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:8px;font-weight:500">My Referral Link</div>
+    <div class="ref-box">
+      <div class="ref-link">${refLink}</div>
+      <button class="btn btn-sm" onclick="copyRef('${refLink}')">Copy</button>
+    </div>
+  </div>`;
+}
+
+/* ---- Actions ---- */
+function setSlippage(s){ slippage=s; renderAll(); }
+
+async function handleApprove(){
+  const btn=document.getElementById("approve-btn");
+  const ldr=document.getElementById("approve-loader");
+  if(btn) btn.disabled=true;
+  if(ldr) ldr.innerHTML='<span class="loader"></span>&nbsp;';
+  try{
+    toast("Approving KAVI...","info");
+    const tx=await kaviContract.approve(CONTRACT_ADDRESS,E.constants.MaxUint256);
+    toast("Approval submitted...","info");
+    await tx.wait();
+    toast("KAVI approved!","success");
+    await loadUserData(); renderAll();
+  }catch(e){
+    toast(errMsg(e),"error");
+    if(btn){ btn.disabled=false; if(ldr) ldr.innerHTML=""; }
+  }
+}
+
+async function handleDeposit(){
+  if(!contract||!game.requiredKaviDeposit) return;
+  const btn=document.getElementById("deposit-btn");
+  const ldr=document.getElementById("deposit-loader");
+  if(btn) btn.disabled=true;
+  if(ldr) ldr.innerHTML='<span class="loader"></span>&nbsp;';
+  try{
+    const refVal=(document.getElementById("ref-input")||{}).value?.trim()||referrerInput;
+    const refAddr=E.utils.isAddress(refVal)?refVal:E.constants.AddressZero;
+    const required=game.requiredKaviDeposit;
+    const maxIn=slippage>0?required.mul(100+slippage).div(100):E.BigNumber.from(0);
+    toast("Confirm in wallet...","info");
+    const tx=await contract.deposit(refAddr,maxIn);
+    toast("Deposit submitted...","info");
+    await tx.wait();
+    toast("✓ Deposit successful!","success",6000);
+    await loadReadData(); await loadUserData(); renderAll();
+  }catch(e){
+    toast(errMsg(e),"error");
+    if(btn){ btn.disabled=false; if(ldr) ldr.innerHTML=""; }
+  }
+}
+
+async function handleClaim(){
+  if(!contract) return;
+  const btn=document.getElementById("claim-btn");
+  if(btn){ btn.disabled=true; btn.innerHTML='<span class="loader"></span>&nbsp;Processing...'; }
+  try{
+    toast("Confirm in wallet...","info");
+    const tx=await contract.claimPot();
+    toast("Claim submitted...","info");
+    await tx.wait();
+    toast("🏆 Pot claimed!","success",8000);
+    await loadReadData(); await loadUserData(); renderAll();
+  }catch(e){
+    toast(errMsg(e),"error");
+    if(btn){ btn.disabled=false; btn.innerHTML="TRIGGER PAYOUT"; }
+  }
+}
+
+function copyRef(link){
+  navigator.clipboard.writeText(link)
+    .then(()=>toast("Referral link copied!","success"))
+    .catch(()=>{
+      const ta=document.createElement("textarea");
+      ta.value=link; ta.style.position="fixed"; ta.style.opacity="0";
+      document.body.appendChild(ta); ta.select(); document.execCommand("copy");
+      document.body.removeChild(ta); toast("Referral link copied!","success");
+    });
+}
+
+window.connectWallet=connectWallet; window.switchBSC=switchBSC;
+window.setSlippage=setSlippage; window.handleApprove=handleApprove;
+window.handleDeposit=handleDeposit; window.handleClaim=handleClaim;
+window.copyRef=copyRef;
+</script>
+</html>
