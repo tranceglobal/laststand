@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>LastStand</title>
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&amp;family=Space+Grotesk:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#06080f;--surface:#0d1117;--surface2:#141922;--surface3:#1c2333;
+  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.1);
+  --amber:#f5a623;--amber2:#ffcc02;--amber-dim:rgba(245,166,35,0.12);--amber-glow:rgba(245,166,35,0.25);
+  --green:#22c55e;--green-dim:rgba(34,197,94,0.1);--green-glow:rgba(34,197,94,0.2);
+  --red:#ef4444;--red-dim:rgba(239,68,68,0.1);--red-glow:rgba(239,68,68,0.2);
+  --blue:#3b82f6;--blue-dim:rgba(59,130,246,0.1);
+  --purple:#a855f7;--purple-dim:rgba(168,85,247,0.1);
+  --muted:#4b5563;--text:#e2e8f0;--text2:#8892a4;
+  --font-mono:'JetBrains Mono',monospace;
+  --font:'Space Grotesk',sans-serif;
+  --font-display:'Orbitron',sans-serif;
+  --radius:14px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;padding:12px;overflow-x:hidden}
+#particles{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:0.5}
+.app{max-width:700px;margin:0 auto;display:flex;flex-direction:column;gap:14px;position:relative;z-index:1}
+#main-content{display:flex;flex-direction:column;gap:14px;min-height:400px}
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;
+  background:radial-gradient(ellipse at 20% 20%,rgba(245,166,35,0.04) 0%,transparent 50%),
+             radial-gradient(ellipse at 80% 80%,rgba(59,130,246,0.04) 0%,transparent 50%),
+             radial-gradient(ellipse at 50% 50%,rgba(168,85,247,0.03) 0%,transparent 60%);
+  animation:bgShift 12s ease-in-out infinite alternate;pointer-events:none;
+}
+@keyframes bgShift{0%{background-position:0% 0%}100%{background-position:100% 100%}}
+
+/* Header */
+.header{display:flex;align-items:center;justify-content:space-between;padding:10px 0 6px;gap:8px;flex-wrap:nowrap;animation:fadeDown .5s ease}
+.brand{
+  font-family:var(--font-display);font-size:22px;font-weight:900;letter-spacing:3px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;
+  background:linear-gradient(135deg,var(--amber),var(--amber2),var(--amber));background-size:200% auto;
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  animation:shimmer 3s linear infinite;filter:drop-shadow(0 0 12px rgba(245,166,35,0.4));
+}
+@keyframes shimmer{0%{background-position:0% center}100%{background-position:200% center}}
+.brand-sub{font-family:var(--font);color:var(--text2);font-weight:500;font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-left:8px;-webkit-text-fill-color:var(--text2)}
+.header-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+
+/* Badges */
+.badge{font-size:11px;padding:5px 12px;border-radius:20px;font-weight:600;letter-spacing:0.5px;white-space:nowrap;font-family:var(--font)}
+.badge-bsc{background:rgba(243,186,47,0.1);color:#f3ba2f;border:1px solid rgba(243,186,47,0.3);box-shadow:0 0 10px rgba(243,186,47,0.1)}
+
+/* Buttons */
+.btn{font-family:var(--font);font-size:13px;font-weight:600;padding:0 18px;height:44px;border-radius:10px;border:none;cursor:pointer;transition:all .2s;letter-spacing:0.5px;display:inline-flex;align-items:center;justify-content:center;gap:6px;-webkit-appearance:none;appearance:none;touch-action:manipulation;position:relative;overflow:hidden}
+.btn::after{content:'';position:absolute;inset:0;background:linear-gradient(rgba(255,255,255,0.08),transparent);pointer-events:none}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn:active:not(:disabled){transform:scale(0.96)}
+.btn-wallet{background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;font-size:12px;padding:0 14px;height:40px;box-shadow:0 4px 14px rgba(59,130,246,0.3)}
+.btn-wallet:hover:not(:disabled){background:linear-gradient(135deg,#1e40af,#2563eb);box-shadow:0 4px 20px rgba(59,130,246,0.45)}
+.btn-switch{background:linear-gradient(135deg,#d97706,var(--amber));color:#000;font-size:12px;padding:0 12px;height:36px}
+.btn-primary{background:linear-gradient(135deg,#d97706,var(--amber),var(--amber2));background-size:200% auto;color:#000;font-size:15px;width:100%;height:54px;border-radius:12px;font-weight:700;letter-spacing:1px;box-shadow:0 4px 20px rgba(245,166,35,0.4);animation:btnGlow 2.5s ease-in-out infinite}
+@keyframes btnGlow{0%,100%{box-shadow:0 4px 20px rgba(245,166,35,0.4)}50%{box-shadow:0 4px 30px rgba(245,166,35,0.65)}}
+.btn-primary:hover:not(:disabled){background-position:right center;box-shadow:0 6px 28px rgba(245,166,35,0.6)}
+.btn-approve{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(59,130,246,0.3);font-size:15px;width:100%;height:54px;border-radius:12px}
+.btn-approve:hover:not(:disabled){background:rgba(59,130,246,0.2);box-shadow:0 0 20px rgba(59,130,246,0.2)}
+.btn-claim{background:linear-gradient(135deg,#16a34a,var(--green),#4ade80);background-size:200% auto;color:#000;font-size:16px;width:100%;height:58px;border-radius:12px;font-weight:700;letter-spacing:1px;box-shadow:0 4px 24px rgba(34,197,94,0.45);animation:claimPulse 1.8s ease-in-out infinite}
+@keyframes claimPulse{0%,100%{box-shadow:0 4px 24px rgba(34,197,94,0.45)}50%{box-shadow:0 4px 40px rgba(34,197,94,0.7)}}
+.btn-sm{font-size:12px;padding:0 14px;height:36px;background:var(--surface3);color:var(--text2);border:1px solid var(--border2);border-radius:8px;flex-shrink:0;transition:all .2s}
+.btn-sm:hover{color:var(--amber);border-color:var(--amber-dim);box-shadow:0 0 10px var(--amber-glow)}
+
+/* Cards */
+.card{background:linear-gradient(145deg,var(--surface),var(--surface2));border:1px solid var(--border);border-radius:var(--radius);padding:18px;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s}
+.card::before{content:'';position:absolute;inset:0;border-radius:var(--radius);background:linear-gradient(135deg,rgba(255,255,255,0.03),transparent 60%);pointer-events:none}
+.card:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,0.3)}
+.card-label{font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--text2);margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.card-label::after{content:'';flex:1;height:1px;background:var(--border2);border-radius:1px}
+
+/* Hero */
+.hero{background:linear-gradient(145deg,#0d1117,#111827);border:1px solid rgba(245,166,35,0.15);border-radius:18px;padding:24px 18px;position:relative;overflow:hidden;box-shadow:0 0 40px rgba(245,166,35,0.06),inset 0 1px 0 rgba(255,255,255,0.05)}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% -10%,rgba(245,166,35,0.12) 0%,transparent 60%),radial-gradient(ellipse at 90% 90%,rgba(168,85,247,0.05) 0%,transparent 50%);pointer-events:none}
+.hero::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(245,166,35,0.4),transparent)}
+.round-tag{font-family:var(--font-display);font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text2);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;box-shadow:0 0 8px var(--green);animation:livePulse 1.2s ease-in-out infinite}
+@keyframes livePulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(0.8)}}
+.timer-wrap{text-align:center;margin:8px 0 22px}
+.timer{font-family:var(--font-display);font-size:clamp(44px,13vw,64px);font-weight:900;color:var(--amber);letter-spacing:clamp(4px,1.5vw,8px);line-height:1;text-shadow:0 0 30px rgba(245,166,35,0.5),0 0 60px rgba(245,166,35,0.2);animation:timerGlow 2s ease-in-out infinite alternate}
+@keyframes timerGlow{from{text-shadow:0 0 20px rgba(245,166,35,0.4),0 0 40px rgba(245,166,35,0.15)}to{text-shadow:0 0 40px rgba(245,166,35,0.7),0 0 80px rgba(245,166,35,0.3)}}
+.timer.expired{color:var(--red);text-shadow:0 0 30px rgba(239,68,68,0.6),0 0 60px rgba(239,68,68,0.3);animation:expiredFlash 1s ease-in-out infinite}
+@keyframes expiredFlash{0%,100%{opacity:1;text-shadow:0 0 30px rgba(239,68,68,0.6)}50%{opacity:.7;text-shadow:0 0 60px rgba(239,68,68,0.9)}}
+.timer-sub{font-size:11px;color:var(--text2);margin-top:8px;letter-spacing:2px;text-transform:uppercase;font-family:var(--font)}
+.hero-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.hero-stat{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:12px 14px;transition:all .2s;backdrop-filter:blur(4px)}
+.hero-stat:hover{border-color:var(--border2);background:rgba(255,255,255,0.05)}
+.hero-stat .lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-weight:600}
+.hero-stat .val{font-family:var(--font-mono);font-size:clamp(12px,3vw,15px);color:var(--text);word-break:break-all;line-height:1.3;font-weight:600}
+.hero-stat .val.green{color:var(--green);text-shadow:0 0 10px var(--green-glow)}
+.hero-stat .val.amber{color:var(--amber);text-shadow:0 0 10px var(--amber-glow)}
+
+/* Deposit */
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;color:var(--text2);margin-bottom:6px;font-weight:600;letter-spacing:0.5px}
+.field input{width:100%;background:var(--surface3);border:1px solid var(--border2);border-radius:10px;padding:0 14px;height:50px;color:var(--text);font-size:16px;font-family:var(--font-mono);outline:none;transition:border-color .2s,box-shadow .2s;-webkit-appearance:none;appearance:none}
+.field input:focus{border-color:var(--amber);box-shadow:0 0 0 3px var(--amber-dim)}
+.field input::placeholder{color:var(--muted);font-size:13px}
+.balance-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text2);margin-bottom:14px;gap:8px;padding:8px 12px;background:var(--surface3);border-radius:8px}
+.balance-row span{font-family:var(--font-mono);color:var(--amber);font-weight:600}
+.slip-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.slip-btn{font-size:13px;padding:0 16px;height:38px;border-radius:8px;border:1px solid var(--border2);background:var(--surface3);color:var(--text2);cursor:pointer;transition:all .2s;font-family:var(--font);font-weight:500;touch-action:manipulation;-webkit-appearance:none;appearance:none}
+.slip-btn:hover{border-color:var(--border2);color:var(--text)}
+.slip-btn.active{background:var(--amber-dim);border-color:var(--amber);color:var(--amber);box-shadow:0 0 12px var(--amber-dim)}
+.required-row{background:linear-gradient(135deg,rgba(245,166,35,0.06),rgba(245,166,35,0.02));border:1px solid rgba(245,166,35,0.15);border-radius:12px;padding:14px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+.required-row .lbl{font-size:11px;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;font-weight:600}
+.required-row .val{font-family:var(--font-mono);font-size:18px;color:var(--amber);font-weight:700}
+.required-row .usd{font-size:12px;color:var(--muted);text-align:right;font-family:var(--font-mono)}
+
+/* Claim banner */
+.claim-banner{background:linear-gradient(135deg,rgba(34,197,94,0.1),rgba(34,197,94,0.04));border:1px solid rgba(34,197,94,0.3);border-radius:16px;padding:24px 18px;text-align:center;box-shadow:0 0 30px rgba(34,197,94,0.08)}
+.claim-title{font-family:var(--font-display);font-size:clamp(24px,7vw,32px);font-weight:900;color:var(--green);letter-spacing:2px;margin-bottom:8px;text-shadow:0 0 20px var(--green-glow)}
+.claim-sub{font-size:14px;color:var(--text2);margin-bottom:16px;line-height:1.6}
+.claim-winner{font-family:var(--font-mono);font-size:13px;color:var(--green);margin-bottom:16px;background:var(--green-dim);padding:10px 16px;border-radius:8px;display:inline-block;border:1px solid rgba(34,197,94,0.2)}
+.claim-pot{font-family:var(--font-display);font-size:clamp(20px,6vw,26px);color:var(--green);font-weight:700;text-shadow:0 0 20px var(--green-glow)}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.stat-box{background:linear-gradient(145deg,var(--surface3),rgba(28,35,51,0.8));border:1px solid var(--border);border-radius:12px;padding:14px;transition:all .2s;position:relative;overflow:hidden}
+.stat-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:2px;opacity:0;transition:opacity .2s}
+.stat-box:hover{border-color:var(--border2);transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,0.2)}
+.stat-box:hover::before{opacity:1}
+.stat-box:nth-child(1)::before{background:linear-gradient(90deg,var(--red),var(--amber))}
+.stat-box:nth-child(2)::before{background:linear-gradient(90deg,var(--green),#4ade80)}
+.stat-box:nth-child(3)::before{background:linear-gradient(90deg,var(--amber),var(--amber2))}
+.stat-box:nth-child(4)::before{background:linear-gradient(90deg,var(--blue),var(--purple))}
+.stat-box:nth-child(5)::before{background:linear-gradient(90deg,var(--purple),var(--blue))}
+.stat-box:nth-child(6)::before{background:linear-gradient(90deg,var(--red),var(--purple))}
+.stat-box .lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-weight:700}
+.stat-box .val{font-family:var(--font-mono);font-size:14px;color:var(--text);word-break:break-all;line-height:1.3;font-weight:600}
+.stat-box .sub{font-size:11px;color:var(--muted);margin-top:4px;font-family:var(--font-mono)}
+
+/* Referral */
+.ref-section{margin-top:14px;padding:14px;background:linear-gradient(135deg,rgba(168,85,247,0.06),rgba(59,130,246,0.04));border:1px solid rgba(168,85,247,0.15);border-radius:12px}
+.ref-label{font-size:11px;color:var(--text2);margin-bottom:8px;font-weight:600;letter-spacing:1px;text-transform:uppercase}
+.ref-inner{background:var(--surface3);border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:8px;border:1px solid var(--border)}
+.ref-link{font-family:var(--font-mono);font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+
+/* Winner history table */
+.wh-table{width:100%;border-collapse:collapse;margin-top:4px}
+.wh-table th{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;padding:0 8px 8px;text-align:left;font-weight:700;border-bottom:1px solid var(--border2)}
+.wh-table td{font-family:var(--font-mono);font-size:12px;padding:8px;border-bottom:1px solid var(--border);color:var(--text2)}
+.wh-table tr:last-child td{border-bottom:none}
+.wh-table tr:hover td{background:rgba(255,255,255,0.02);color:var(--text)}
+.wh-table .rank{font-size:14px;width:28px;text-align:center}
+.wh-table .addr{color:var(--blue)}
+.wh-table .amt{color:var(--green);font-weight:600}
+.wh-table .gid{color:var(--amber)}
+
+/* Global stats banner */
+.global-banner{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.gb-item{background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}
+.gb-item .lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;font-weight:700}
+.gb-item .val{font-family:var(--font-mono);font-size:13px;font-weight:600}
+
+/* My info grid */
+.my-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.my-item{background:var(--surface3);border-radius:10px;padding:12px 14px}
+.my-item .lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;font-weight:700}
+.my-item .val{font-family:var(--font-mono);font-size:14px;font-weight:600;color:var(--text)}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;padding:4px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);margin-bottom:14px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tab-btn{flex:1;min-width:fit-content;font-family:var(--font);font-size:11px;font-weight:600;padding:7px 10px;border:none;border-radius:7px;cursor:pointer;background:none;color:var(--text2);transition:all .2s;white-space:nowrap;letter-spacing:0.5px}
+.tab-btn.active{background:var(--surface3);color:var(--amber);border:1px solid var(--border2)}
+.tab-btn:hover:not(.active){color:var(--text)}
+
+/* Toast */
+.toast-wrap{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:1000;display:flex;flex-direction:column;gap:8px;align-items:center;width:calc(100% - 32px);max-width:380px;pointer-events:none}
+.toast{background:rgba(13,17,23,0.95);backdrop-filter:blur(12px);border:1px solid var(--border2);border-radius:12px;padding:12px 18px;font-size:13px;width:100%;animation:slide-up .25s cubic-bezier(0.34,1.56,0.64,1);display:flex;align-items:center;gap:10px;pointer-events:auto;line-height:1.4;font-weight:500}
+.toast.success{border-color:rgba(34,197,94,0.4);box-shadow:0 0 20px rgba(34,197,94,0.1)}
+.toast.success::before{content:'✓';color:var(--green);font-weight:700}
+.toast.error{border-color:rgba(239,68,68,0.4);box-shadow:0 0 20px rgba(239,68,68,0.1)}
+.toast.error::before{content:'✕';color:var(--red);font-weight:700}
+.toast.info{border-color:rgba(59,130,246,0.4);box-shadow:0 0 20px rgba(59,130,246,0.1)}
+.toast.info::before{content:'●';color:var(--blue);font-size:10px}
+@keyframes slide-up{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
+
+/* Connect overlay */
+.connect-overlay{text-align:center;padding:60px 16px;animation:fadeUp .5s ease}
+.connect-overlay h2{font-family:var(--font-display);font-size:clamp(32px,10vw,48px);font-weight:900;letter-spacing:4px;margin-bottom:12px;background:linear-gradient(135deg,var(--amber),var(--amber2),#ff6b35);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:shimmer 3s linear infinite;filter:drop-shadow(0 0 20px rgba(245,166,35,0.3))}
+.connect-overlay p{color:var(--text2);font-size:15px;margin-bottom:28px;line-height:1.7}
+.connect-overlay .btn{display:flex;margin:0 auto;width:fit-content}
+
+/* Misc */
+.loader{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.15);border-top-color:currentColor;border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeDown{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.empty-msg{text-align:center;padding:24px;color:var(--muted);font-family:var(--font-mono);font-size:12px}
+
+@media(max-width:520px){
+  .brand-sub{display:none}
+  .hero-grid{grid-template-columns:1fr 1fr}
+  .hero-stat:last-child{grid-column:1/-1}
+  .global-banner{grid-template-columns:1fr 1fr}
+  .global-banner .gb-item:last-child{grid-column:1/-1}
+  .toast-wrap{bottom:12px;width:calc(100% - 24px)}
+}
+@media(max-width:360px){
+  body{padding:8px}
+  .brand{font-size:17px}
+  .btn-wallet{font-size:11px;padding:0 10px;height:38px}
+  .hero{padding:18px 12px}
+  .card{padding:14px 12px}
+  .stats-grid{grid-template-columns:1fr}
+  .my-grid{grid-template-columns:1fr}
+  .slip-btn{padding:0 10px;height:36px;font-size:12px}
+}
+</style>
+</head>
+<body>
+<canvas id="particles"></canvas>
+<div class="toast-wrap" id="toasts"></div>
+
+<div class="app">
+  <div class="header">
+    <div style="display:flex;align-items:baseline;gap:0">
+      <div class="brand">LastStand</div>
+      <span class="brand-sub">· BSC</span>
+    </div>
+    <div class="header-right">
+      <div id="net-badge"></div>
+      <button class="btn btn-wallet" id="wallet-btn" onclick="connectWallet()">Connect Wallet</button>
+    </div>
+  </div>
+
+  <div id="main-content">
+    <div class="connect-overlay">
+      <h2>LAST STAND</h2>
+      <p>Last depositor wins the entire pot.<br>Every deposit resets the 30‑minute timer.</p>
+      <button class="btn btn-wallet" onclick="connectWallet()">Connect Wallet to Play</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---- CONTRACT CONFIG ----
+const CONTRACT_ADDRESS = "0x311Ff7F6cC52Bf9a468f78A65190B726e34C0Ff1";
+const KAVI_ADDRESS     = "0x69A8D3EbE5532dcDcD719a16346BAF89c7A5D02F";
+const BSC_CHAIN_ID     = 56;
+const BSC_RPC          = "https://bsc-dataseed1.binance.org/";
+
+// ---- ABI — includes all new contract functions ----
+const CONTRACT_ABI = [
+  // original
+  "function getGameStatus() view returns (bool active,uint256 currentGameId,address currentLastDepositor,uint256 potSize,uint256 timerExpiresAt,uint256 secondsLeft,uint256 kaviPriceUSD,uint256 requiredKaviDeposit)",
+  "function getBurnStatus() view returns (uint256 currentBurnPct,uint256 roundUSDDeposited,uint256 depositCount,uint256 nextThresholdUSD)",
+  "function getUserInfo(address user) view returns (address userReferrer,bool isVerifiedDepositor,uint256 deposited,uint256 claimed)",
+  "function isClaimPending() view returns (bool)",
+  "function deposit(address referrer,uint256 maxKaviIn) external",
+  "function claimPot() external",
+  // new
+  "function getGlobalStats() view returns (uint256 _totalBurned,uint256 _totalPlatformFees,uint256 _totalReferralPaid,uint256 _allTimeDeposits,uint256 _uniqueDepositorCount,uint256 _totalRoundsCompleted,address _lastWinner,uint256 _lastWinAmount,uint48 _lastWinGameId)",
+  "function getReferralStats(address referrer) view returns (uint256 totalReferred,uint256 totalEarned,address myReferrer)",
+  "function getWinnerHistory(uint256 count) view returns (address[] winners,uint256[] netAmounts,uint256[] grossPots,uint256[] gameIds,uint256[] timestamps)",
+  "function getUserDashboard(address user) view returns (address userReferrer,bool isVerifiedDepositor,uint256 totalDepositedKavi,uint256 totalWonKavi,uint256 myReferralCount,uint256 myReferralEarnings,bool isCurrentLeader)",
+  "function getGameWinAmount(uint256 gameId) view returns (address winner,uint256 amount)",
+];
+const KAVI_ABI = [
+  "function approve(address spender,uint256 amount) returns (bool)",
+  "function allowance(address owner,address spender) view returns (uint256)",
+  "function balanceOf(address account) view returns (uint256)",
+  "function decimals() view returns (uint8)",
+];
+
+// ---- State ----
+let E;
+let provider, signer, userAddr, chainId;
+let readProvider, readContract, readKaviContract;
+let contract, kaviContract;
+let kaviDec = 18;
+let game = {}, burn = {}, user = {}, globalStats = {}, refStats = {}, winHistory = [];
+let dashboard = {};
+let kaviBalance = null, kaviAllowance = null;
+let slippage = 2, referrerInput = "";
+let polling = null, timerTick = null, localSecondsLeft = 0;
+let activeTab = "game"; // game | stats | winners | myinfo
+
+// ---- Helpers ----
+const short = a => (!a || a === "0x0000000000000000000000000000000000000000") ? "—" : a.slice(0,6)+"..."+a.slice(-4);
+const fmtKavi = bn => { try{ const v=parseFloat(E.utils.formatUnits(bn,kaviDec)); return v>=1000000?(v/1000000).toFixed(2)+"M":v>=1000?(v/1000).toFixed(2)+"K":v.toFixed(4); }catch{ return "—"; } };
+const fmtUSD = (bn,price) => { try{ const v=parseFloat(E.utils.formatUnits(bn,kaviDec))*price; return "$"+v.toFixed(2); }catch{ return "$0.00"; } };
+const fmtDate = ts => { try{ return new Date(ts*1000).toLocaleDateString("en-IN",{day:"2-digit",month:"short"}); }catch{ return "—"; } };
+function fmtTimer(s){
+  if(s<=0) return "00:00";
+  const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=s%60;
+  const p=n=>String(n).padStart(2,"0");
+  return h>0?`${p(h)}:${p(m)}:${p(sec)}`:`${p(m)}:${p(sec)}`;
+}
+function toast(msg,type="info",dur=4000){
+  const el=document.createElement("div");
+  el.className=`toast ${type}`;
+  el.innerHTML=`<span>${msg}</span>`;
+  document.getElementById("toasts").appendChild(el);
+  setTimeout(()=>el.remove(),dur);
+}
+function errMsg(e){
+  const m=e?.reason||e?.message||"";
+  if(m.includes("NoLiquidity"))      return "Pool has no liquidity";
+  if(m.includes("RoundExpired"))     return "Timer expired — settle current round first";
+  if(m.includes("TimerRunning"))     return "Timer is still running";
+  if(m.includes("PotEmpty"))         return "No active game or pot is empty";
+  if(m.includes("SlippageExceeded")) return "Price moved — raise slippage or retry";
+  if(m.includes("DepositZero"))      return "Deposit amount is zero — check pool";
+  if(m.includes("user rejected"))    return "Transaction rejected";
+  if(m.includes("insufficient"))     return "Insufficient BNB for gas";
+  return m.slice(0,80)||"Transaction failed";
+}
+const livePrice = () => game.kaviPriceUSD ? parseFloat(E.utils.formatUnits(game.kaviPriceUSD,18)) : 0;
+
+// ---- Init ----
+function waitEthers(cb){ window.ethers?(E=window.ethers,cb()):setTimeout(()=>waitEthers(cb),80); }
+window.addEventListener("load",()=>waitEthers(setup));
+
+function setup(){
+  readProvider     = new E.providers.JsonRpcProvider(BSC_RPC);
+  readContract     = new E.Contract(CONTRACT_ADDRESS,CONTRACT_ABI,readProvider);
+  readKaviContract = new E.Contract(KAVI_ADDRESS,KAVI_ABI,readProvider);
+  detectRef(); loadReadData(); startPolling();
+}
+function detectRef(){
+  const ref=new URLSearchParams(window.location.search).get("ref")||"";
+  if(ref && E.utils.isAddress(ref)) referrerInput=ref;
+}
+
+// ---- Wallet ----
+async function connectWallet(){
+  if(!window.ethereum){ toast("MetaMask / wallet not found.","error"); return; }
+  try{
+    await window.ethereum.request({method:"eth_requestAccounts"});
+    provider = new E.providers.Web3Provider(window.ethereum);
+    signer   = provider.getSigner();
+    userAddr = await signer.getAddress();
+    chainId  = (await provider.getNetwork()).chainId;
+    contract     = new E.Contract(CONTRACT_ADDRESS,CONTRACT_ABI,signer);
+    kaviContract = new E.Contract(KAVI_ADDRESS,KAVI_ABI,signer);
+    kaviDec = await readKaviContract.decimals();
+    updateWalletUI();
+    if(chainId===BSC_CHAIN_ID){ await loadUserData(); await loadRefStats(); }
+    toast("Connected: "+short(userAddr),"success");
+    window.ethereum.on("accountsChanged",()=>location.reload());
+    window.ethereum.on("chainChanged",()=>location.reload());
+  }catch(e){ toast(errMsg(e),"error"); }
+}
+async function switchBSC(){
+  try{
+    await window.ethereum.request({method:"wallet_switchEthereumChain",params:[{chainId:"0x38"}]});
+  }catch(e){
+    if(e.code===4902) await window.ethereum.request({
+      method:"wallet_addEthereumChain",
+      params:[{chainId:"0x38",chainName:"BNB Smart Chain",nativeCurrency:{name:"BNB",symbol:"BNB",decimals:18},rpcUrls:["https://bsc-dataseed.binance.org/"],blockExplorerUrls:["https://bscscan.com/"]}]
+    });
+  }
+}
+function updateWalletUI(){
+  const btn=document.getElementById("wallet-btn");
+  const badge=document.getElementById("net-badge");
+  if(userAddr){
+    btn.textContent=short(userAddr);
+    btn.onclick=null;
+    btn.style.cssText="background:var(--surface2);color:var(--text2);border:1px solid var(--border2);font-size:12px;padding:0 10px;height:38px";
+  }
+  if(chainId===BSC_CHAIN_ID)
+    badge.innerHTML=`<div class="badge badge-bsc">BSC ✓</div>`;
+  else if(chainId)
+    badge.innerHTML=`<button class="btn btn-switch" onclick="switchBSC()">Switch to BSC</button>`;
+}
+
+// ---- Data loading ----
+async function loadReadData(){
+  try{
+    kaviDec = await readKaviContract.decimals();
+    const [gs,bs,gStats,wh] = await Promise.all([
+      readContract.getGameStatus(),
+      readContract.getBurnStatus(),
+      readContract.getGlobalStats(),
+      readContract.getWinnerHistory(10),
+    ]);
+    game={
+      active:gs.active, gameId:gs.currentGameId.toNumber(),
+      lastDepositor:gs.currentLastDepositor, potSize:gs.potSize,
+      timerExpiresAt:gs.timerExpiresAt.toNumber(),
+      secondsLeft:gs.secondsLeft.toNumber(),
+      kaviPriceUSD:gs.kaviPriceUSD, requiredKaviDeposit:gs.requiredKaviDeposit,
+    };
+    burn={
+      pct:bs.currentBurnPct.toNumber(), roundUSD:bs.roundUSDDeposited,
+      depositCount:bs.depositCount.toNumber(), nextThresholdUSD:bs.nextThresholdUSD,
+    };
+    globalStats={
+      totalBurned:gStats._totalBurned,
+      totalPlatformFees:gStats._totalPlatformFees,
+      totalReferralPaid:gStats._totalReferralPaid,
+      allTimeDeposits:gStats._allTimeDeposits.toNumber(),
+      uniqueDepositorCount:gStats._uniqueDepositorCount.toNumber(),
+      totalRoundsCompleted:gStats._totalRoundsCompleted.toNumber(),
+      lastWinner:gStats._lastWinner,
+      lastWinAmount:gStats._lastWinAmount,
+      lastWinGameId:gStats._lastWinGameId,
+    };
+    // parse winner history arrays
+    winHistory=[];
+    for(let i=0;i<wh.winners.length;i++){
+      winHistory.push({
+        winner:wh.winners[i],
+        netAmount:wh.netAmounts[i],
+        grossPot:wh.grossPots[i],
+        gameId:wh.gameIds[i].toNumber(),
+        timestamp:wh.timestamps[i].toNumber(),
+      });
+    }
+    localSecondsLeft=game.secondsLeft;
+    renderAll();
+  }catch(e){ console.error("loadReadData:",e); renderAll(); }
+}
+
+async function loadUserData(){
+  if(!userAddr||chainId!==BSC_CHAIN_ID) return;
+  try{
+    const [dash,bal,alw]=await Promise.all([
+      readContract.getUserDashboard(userAddr),
+      readKaviContract.balanceOf(userAddr),
+      readKaviContract.allowance(userAddr,CONTRACT_ADDRESS),
+    ]);
+    dashboard={
+      referrer:dash.userReferrer,
+      verified:dash.isVerifiedDepositor,
+      deposited:dash.totalDepositedKavi,
+      claimed:dash.totalWonKavi,
+      refCount:dash.myReferralCount.toNumber(),
+      refEarnings:dash.myReferralEarnings,
+      isLeader:dash.isCurrentLeader,
+    };
+    // keep user for backwards compat
+    user={referrer:dash.userReferrer,verified:dash.isVerifiedDepositor,deposited:dash.totalDepositedKavi,claimed:dash.totalWonKavi};
+    kaviBalance=bal; kaviAllowance=alw;
+    renderAll();
+  }catch(e){ console.error("loadUserData:",e); }
+}
+
+async function loadRefStats(){
+  if(!userAddr||chainId!==BSC_CHAIN_ID) return;
+  try{
+    const rs = await readContract.getReferralStats(userAddr);
+    refStats={
+      totalReferred:rs.totalReferred.toNumber(),
+      totalEarned:rs.totalEarned,
+      myReferrer:rs.myReferrer,
+    };
+    renderAll();
+  }catch(e){ console.error("loadRefStats:",e); }
+}
+
+function startPolling(){
+  clearInterval(polling); clearInterval(timerTick);
+  polling=setInterval(()=>{
+    loadReadData();
+    if(userAddr&&chainId===BSC_CHAIN_ID){ loadUserData(); loadRefStats(); }
+  },10000);
+  timerTick=setInterval(()=>{
+    if(game.active&&localSecondsLeft>0){
+      localSecondsLeft--;
+      const el=document.getElementById("timer-display");
+      if(el){
+        el.textContent=fmtTimer(localSecondsLeft);
+        if(localSecondsLeft===0){ el.className="timer expired"; loadReadData(); }
+      }
+    }
+  },1000);
+}
+
+// ---- Tab navigation ----
+function switchTab(t){
+  activeTab=t;
+  renderAll();
+}
+
+// ---- Render ----
+function renderAll(){
+  updateWalletUI();
+  const connected=!!userAddr&&chainId===BSC_CHAIN_ID;
+  document.getElementById("main-content").innerHTML=
+    renderHero()+
+    (game.active&&localSecondsLeft<=0?renderClaim():"")+
+    renderTabs(connected);
+}
+
+function renderHero(){
+  const expired=game.active&&localSecondsLeft<=0;
+  const price=game.kaviPriceUSD?parseFloat(E.utils.formatUnits(game.kaviPriceUSD,18)).toFixed(6):"—";
+  const pot=game.potSize?fmtKavi(game.potSize):"0.0000";
+  const potUSD=game.potSize&&game.kaviPriceUSD
+    ?"$"+(parseFloat(E.utils.formatUnits(game.potSize,kaviDec))*parseFloat(E.utils.formatUnits(game.kaviPriceUSD,18))).toFixed(2):"";
+  return `
+  <div class="hero">
+    <div class="round-tag">${game.active?`<span class="live-dot"></span>ROUND #${game.gameId} — LIVE`:game.gameId>0?`ROUND #${game.gameId} ENDED`:"NO ACTIVE ROUND"}</div>
+    <div class="timer-wrap">
+      <div id="timer-display" class="timer ${expired?"expired":""}">${game.active?fmtTimer(localSecondsLeft):"--:--"}</div>
+      <div class="timer-sub">${expired?"⚠ TIMER EXPIRED — AWAITING CLAIM":game.active?"time remaining":"deposit to start a new round"}</div>
+    </div>
+    <div class="hero-grid">
+      <div class="hero-stat"><div class="lbl">Pot Size</div><div class="val green">${pot}<br><span style="font-size:11px;color:var(--muted)">${potUSD}</span></div></div>
+      <div class="hero-stat"><div class="lbl">Last Depositor</div><div class="val">${short(game.lastDepositor)}</div></div>
+      <div class="hero-stat"><div class="lbl">KAVI Price</div><div class="val amber">$${price}</div></div>
+    </div>
+  </div>`;
+}
+
+function renderClaim(){
+  const pot=game.potSize?fmtKavi(game.potSize):"0";
+  const isWinner=userAddr&&game.lastDepositor&&userAddr.toLowerCase()===game.lastDepositor.toLowerCase();
+  return `
+  <div class="claim-banner">
+    <div class="claim-title">${isWinner?"🏆 YOU WIN!":"⏰ ROUND OVER"}</div>
+    <div class="claim-sub">${isWinner?"You are the last depositor! Claim your winnings.":"Timer expired. Anyone can trigger the payout."}</div>
+    <div class="claim-winner">Winner: ${short(game.lastDepositor)}</div><br>
+    <div class="claim-pot">${pot} KAVI</div><br>
+    <button class="btn btn-claim" id="claim-btn" onclick="handleClaim()">
+      <span id="claim-loader"></span>${isWinner?"CLAIM MY POT":"TRIGGER PAYOUT"}
+    </button>
+  </div>`;
+}
+
+function renderTabs(connected){
+  const tabs=[
+    {id:"game",  label:"⚔️ LastStand"},
+    {id:"stats", label:"📊 Stats"},
+    {id:"winners",label:"🏆 Winners"},
+    {id:"myinfo",label:"👤 My Info"},
+  ];
+  const tabBar=`<div class="tabs">${tabs.map(t=>`<button class="tab-btn ${activeTab===t.id?"active":""}" onclick="switchTab('${t.id}')">${t.label}</button>`).join("")}</div>`;
+
+  let content="";
+  if(activeTab==="game")    content=renderGameTab(connected);
+  if(activeTab==="stats")   content=renderStatsTab(connected);
+  if(activeTab==="winners") content=renderWinnersTab();
+  if(activeTab==="myinfo")  content=renderMyInfoTab(connected);
+
+  return `<div>${tabBar}${content}</div>`;
+}
+
+// ---- TAB: Game (Deposit) ----
+function renderGameTab(connected){
+  const req=game.requiredKaviDeposit?fmtKavi(game.requiredKaviDeposit):"—";
+  const bal=kaviBalance?fmtKavi(kaviBalance):"—";
+  const needsApproval=connected&&kaviAllowance&&game.requiredKaviDeposit&&kaviAllowance.lt(game.requiredKaviDeposit);
+  const hasBalance=connected&&kaviBalance&&game.requiredKaviDeposit&&kaviBalance.gte(game.requiredKaviDeposit);
+  const expired=game.active&&localSecondsLeft<=0;
+  const price=livePrice();
+
+  // this-round burn estimate
+  const roundUSDNum=burn.roundUSD?parseFloat(E.utils.formatUnits(burn.roundUSD,18)):0;
+  const burnedUSD=roundUSDNum*(burn.pct||0)/100;
+  const burnedKavi=price>0?(burnedUSD/price):0;
+
+  return `
+  <div class="card">
+    <div class="card-label">Deposit — $0.50</div>
+    <div class="required-row">
+      <div><div class="lbl">Required KAVI</div><div class="val">${req}</div></div>
+      <div class="usd">≈ $0.50<br>live price</div>
+    </div>
+    ${connected?`<div class="balance-row"><span>Your KAVI Balance</span><span>${bal}</span></div>`:""}
+    <div class="field">
+      <label>Referrer <span style="color:var(--muted)">(optional)</span></label>
+      <input type="text" id="ref-input" placeholder="0x..." value="${referrerInput}" oninput="referrerInput=this.value" autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+    <div style="margin-bottom:12px">
+      <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px;font-weight:500">Slippage</label>
+      <div class="slip-row">
+        ${[0,1,2,5].map(s=>`<button class="slip-btn ${slippage===s?"active":""}" onclick="setSlippage(${s})">${s===0?"Auto":s+"%"}</button>`).join("")}
+      </div>
+    </div>
+    <div style="background:var(--surface3);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;justify-content:space-between;font-size:12px;color:var(--text2)">
+      <span>🔥 Burn rate this round</span>
+      <span style="color:var(--red);font-family:var(--font-mono);font-weight:600">${burn.pct||5}% &nbsp;·&nbsp; ${burnedKavi.toFixed(2)} KAVI burned</span>
+    </div>
+    ${!connected
+      ?`<button class="btn btn-primary" onclick="connectWallet()">Connect Wallet</button>`
+      :expired
+        ?`<button class="btn btn-primary" disabled>Settle Round First</button>`
+        :needsApproval
+          ?`<button class="btn btn-approve" id="approve-btn" onclick="handleApprove()"><span id="approve-loader"></span>Approve KAVI</button>`
+          :`<button class="btn btn-primary" id="deposit-btn" onclick="handleDeposit()" ${!hasBalance?"disabled":""}>
+              <span id="deposit-loader"></span>${!hasBalance?"Insufficient KAVI":"DEPOSIT NOW"}
+            </button>`
+    }
+  </div>`;
+}
+
+// ---- TAB: Stats ----
+function renderStatsTab(connected){
+  const price=livePrice();
+  const tbKavi=globalStats.totalBurned?fmtKavi(globalStats.totalBurned):"0.0000";
+  const tbUSD=globalStats.totalBurned?fmtUSD(globalStats.totalBurned,price):"$0.00";
+  const roundBurnKavi=(()=>{
+    const roundUSDNum=burn.roundUSD?parseFloat(E.utils.formatUnits(burn.roundUSD,18)):0;
+    const usd=roundUSDNum*(burn.pct||0)/100;
+    return price>0?(usd/price).toFixed(4):"0.0000";
+  })();
+
+  const lastWinKavi=globalStats.lastWinAmount?fmtKavi(globalStats.lastWinAmount):"—";
+  const lastWinUSD=globalStats.lastWinAmount?fmtUSD(globalStats.lastWinAmount,price):"—";
+
+  const refLink=connected?`${window.location.origin+window.location.pathname}?ref=${userAddr}`:"";
+  const myRefs=refStats.totalReferred||0;
+  const myRefEarn=refStats.totalEarned?fmtKavi(refStats.totalEarned):"0.0000";
+  const myRefEarnUSD=refStats.totalEarned?fmtUSD(refStats.totalEarned,price):"$0.00";
+
+  return `
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-label">🌐 All-Time Global Stats</div>
+    <div class="global-banner">
+      <div class="gb-item"><div class="lbl">Total Rounds</div><div class="val" style="color:var(--amber)">${globalStats.totalRoundsCompleted||0}</div></div>
+      <div class="gb-item"><div class="lbl">All Deposits</div><div class="val" style="color:var(--blue)">${(globalStats.allTimeDeposits||0).toLocaleString()}</div></div>
+      <div class="gb-item"><div class="lbl">Unique Players</div><div class="val" style="color:var(--purple)">${(globalStats.uniqueDepositorCount||0).toLocaleString()}</div></div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="lbl">🔥 Total Burned (all-time)</div>
+        <div class="val" style="color:var(--red)">${tbKavi} <span style="font-size:10px;color:var(--muted)">KAVI</span></div>
+        <div class="sub">${tbUSD}</div>
+      </div>
+      <div class="stat-box">
+        <div class="lbl">🔥 This Round Burn</div>
+        <div class="val" style="color:var(--amber)">${roundBurnKavi} <span style="font-size:10px;color:var(--muted)">KAVI</span></div>
+        <div class="sub">${burn.pct||5}% rate · ${burn.depositCount||0} deposits</div>
+      </div>
+      <div class="stat-box">
+        <div class="lbl">🏆 Last Winner</div>
+        <div class="val" style="color:var(--green)">${short(globalStats.lastWinner)}</div>
+        <div class="sub">Round #${globalStats.lastWinGameId||"—"}</div>
+      </div>
+      <div class="stat-box">
+        <div class="lbl">💎 Last Win Amount</div>
+        <div class="val" style="color:var(--green)">${lastWinKavi} <span style="font-size:10px;color:var(--muted)">KAVI</span></div>
+        <div class="sub">${lastWinUSD}</div>
+      </div>
+
+    </div>
+  </div>
+
+  ${connected?`
+  <div class="card">
+    <div class="card-label">🔗 My Referrals</div>
+    <div class="stats-grid" style="margin-bottom:14px">
+      <div class="stat-box">
+        <div class="lbl">👥 Total Referred</div>
+        <div class="val" style="color:var(--purple)">${myRefs}</div>
+        <div class="sub">people you referred</div>
+      </div>
+      <div class="stat-box">
+        <div class="lbl">💰 Referral Earned</div>
+        <div class="val" style="color:var(--amber)">${myRefEarn} <span style="font-size:10px;color:var(--muted)">KAVI</span></div>
+        <div class="sub">${myRefEarnUSD}</div>
+      </div>
+    </div>
+    <div class="ref-section" style="margin-top:0">
+      <div class="ref-label">🔗 My Referral Link</div>
+      <div class="ref-inner">
+        <div class="ref-link">${refLink}</div>
+        <button class="btn btn-sm" onclick="copyRef('${refLink}')">Copy</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px">You earn 5% of every deposit from referred users</div>
+    </div>
+  </div>`:""}`;
+}
+
+// ---- TAB: Winners ----
+function renderWinnersTab(){
+  const price=livePrice();
+  if(!winHistory.length) return `<div class="card"><div class="empty-msg">No rounds completed yet</div></div>`;
+
+  const totalWon=winHistory.reduce((s,w)=>{
+    try{ return s+parseFloat(E.utils.formatUnits(w.netAmount,kaviDec)); }catch{ return s; }
+  },0);
+
+  const medals=["🥇","🥈","🥉"];
+  const rows=winHistory.map((w,i)=>{
+    const kavi=fmtKavi(w.netAmount);
+    const usd=fmtUSD(w.netAmount,price);
+    const isMe=userAddr&&w.winner.toLowerCase()===userAddr.toLowerCase();
+    return `<tr>
+      <td class="rank">${medals[i]||i+1}</td>
+      <td class="addr" style="${isMe?"color:var(--amber)":""}" title="${w.winner}">${short(w.winner)}${isMe?" ⭐":""}</td>
+      <td class="gid">#${w.gameId}</td>
+      <td class="amt">${kavi}</td>
+      <td style="color:var(--muted);font-size:11px">${fmtDate(w.timestamp)}</td>
+    </tr>`;
+  }).join("");
+
+  return `
+  <div class="card">
+    <div class="card-label">🏆 Winner History (last 10 rounds)</div>
+    <div style="display:flex;gap:12px;margin-bottom:14px">
+      <div style="flex:1;background:var(--surface3);border-radius:10px;padding:12px;text-align:center">
+        <div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:4px;text-transform:uppercase">Total Rounds</div>
+        <div style="font-family:var(--font-mono);font-size:18px;font-weight:600;color:var(--amber)">${globalStats.totalRoundsCompleted||winHistory.length}</div>
+      </div>
+      <div style="flex:1;background:var(--surface3);border-radius:10px;padding:12px;text-align:center">
+        <div style="font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:4px;text-transform:uppercase">Total Distributed</div>
+        <div style="font-family:var(--font-mono);font-size:18px;font-weight:600;color:var(--green)">${totalWon.toFixed(2)} KAVI</div>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="wh-table">
+        <thead><tr>
+          <th>#</th><th>Winner</th><th>Round</th><th>Won (KAVI)</th><th>Date</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+// ---- TAB: My Info ----
+function renderMyInfoTab(connected){
+  if(!connected) return `
+    <div class="card" style="text-align:center;padding:32px">
+      <div style="font-size:32px;margin-bottom:12px">👤</div>
+      <div style="color:var(--text2);margin-bottom:20px">Connect wallet to see your stats</div>
+      <button class="btn btn-wallet" style="margin:0 auto;display:flex" onclick="connectWallet()">Connect Wallet</button>
+    </div>`;
+
+  const price=livePrice();
+  const wonKavi=dashboard.claimed?fmtKavi(dashboard.claimed):"0.0000";
+  const wonUSD=dashboard.claimed?fmtUSD(dashboard.claimed,price):"$0.00";
+  const refEarnKavi=dashboard.refEarnings?fmtKavi(dashboard.refEarnings):"0.0000";
+  const refEarnUSD=dashboard.refEarnings?fmtUSD(dashboard.refEarnings,price):"$0.00";
+  const balKavi=kaviBalance?fmtKavi(kaviBalance):"—";
+  const balUSD=kaviBalance?fmtUSD(kaviBalance,price):"$0.00";
+  const myRef=refStats.myReferrer&&refStats.myReferrer!=="0x0000000000000000000000000000000000000000"?short(refStats.myReferrer):"None";
+  const isLeader=dashboard.isLeader;
+  const refLink=`${window.location.origin+window.location.pathname}?ref=${userAddr}`;
+
+  return `
+  <div class="card">
+    <div class="card-label">👤 My Wallet Info</div>
+
+    ${isLeader?`<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--green);font-weight:600;text-align:center">🏆 You are the current leader! Don't let anyone take your spot.</div>`:""}
+
+    <div class="my-grid">
+      <div class="my-item">
+        <div class="lbl">Status</div>
+        <div class="val" style="color:${dashboard.verified?"var(--green)":"var(--red)"}">${dashboard.verified?"✅ Verified":"❌ Not deposited"}</div>
+      </div>
+      <div class="my-item">
+        <div class="lbl">My Referrer</div>
+        <div class="val" style="color:var(--purple);font-size:13px">${myRef}</div>
+      </div>
+      <div class="my-item">
+        <div class="lbl">🏆 Total Won</div>
+        <div class="val" style="color:var(--amber)">${wonKavi} <span style="font-size:10px;color:var(--muted)">KAVI</span></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">${wonUSD}</div>
+      </div>
+      <div class="my-item">
+        <div class="lbl">💰 Referral Earned</div>
+        <div class="val" style="color:var(--green)">${refEarnKavi} <span style="font-size:10px;color:var(--muted)">KAVI</span></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">${refEarnUSD}</div>
+      </div>
+      <div class="my-item" style="grid-column:1/-1;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div class="lbl">👥 People Referred</div>
+          <div class="val" style="color:var(--purple);font-size:22px">${dashboard.refCount||0}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="lbl">💳 KAVI Balance</div>
+          <div class="val" style="color:var(--amber)">${balKavi} <span style="font-size:10px;color:var(--muted)">KAVI</span></div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${balUSD}</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:14px">
+      <div class="ref-label" style="font-size:11px;color:var(--text2);margin-bottom:8px;font-weight:600;letter-spacing:1px;text-transform:uppercase">🔗 My Referral Link</div>
+      <div class="ref-inner">
+        <div class="ref-link">${refLink}</div>
+        <button class="btn btn-sm" onclick="copyRef('${refLink}')">Copy</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px">You earn 5% of every deposit from referred users</div>
+    </div>
+  </div>`;
+}
+
+// ---- Actions ----
+function setSlippage(s){ slippage=s; renderAll(); }
+
+async function handleApprove(){
+  const btn=document.getElementById("approve-btn");
+  const ldr=document.getElementById("approve-loader");
+  if(btn) btn.disabled=true;
+  if(ldr) ldr.innerHTML='<span class="loader"></span>&nbsp;';
+  try{
+    toast("Approving KAVI...","info");
+    const tx=await kaviContract.approve(CONTRACT_ADDRESS,E.constants.MaxUint256);
+    toast("Approval submitted...","info");
+    await tx.wait();
+    toast("KAVI approved!","success");
+    await loadUserData(); renderAll();
+  }catch(e){
+    toast(errMsg(e),"error");
+    if(btn){ btn.disabled=false; if(ldr) ldr.innerHTML=""; }
+  }
+}
+
+async function handleDeposit(){
+  if(!contract||!game.requiredKaviDeposit) return;
+  const btn=document.getElementById("deposit-btn");
+  const ldr=document.getElementById("deposit-loader");
+  if(btn) btn.disabled=true;
+  if(ldr) ldr.innerHTML='<span class="loader"></span>&nbsp;';
+  try{
+    const refVal=(document.getElementById("ref-input")||{}).value?.trim()||referrerInput;
+    const refAddr=E.utils.isAddress(refVal)?refVal:E.constants.AddressZero;
+    const required=game.requiredKaviDeposit;
+    const maxIn=slippage>0?required.mul(100+slippage).div(100):E.BigNumber.from(0);
+    toast("Confirm in wallet...","info");
+    const tx=await contract.deposit(refAddr,maxIn);
+    toast("Deposit submitted...","info");
+    await tx.wait();
+    toast("✓ Deposit successful!","success",6000);
+    await loadReadData(); await loadUserData(); await loadRefStats(); renderAll();
+  }catch(e){
+    toast(errMsg(e),"error");
+    if(btn){ btn.disabled=false; if(ldr) ldr.innerHTML=""; }
+  }
+}
+
+async function handleClaim(){
+  if(!contract) return;
+  const btn=document.getElementById("claim-btn");
+  if(btn){ btn.disabled=true; btn.innerHTML='<span class="loader"></span>&nbsp;Processing...'; }
+  try{
+    toast("Confirm in wallet...","info");
+    const tx=await contract.claimPot();
+    toast("Claim submitted...","info");
+    await tx.wait();
+    toast("🏆 Pot claimed!","success",8000);
+    await loadReadData(); await loadUserData(); await loadRefStats(); renderAll();
+  }catch(e){
+    toast(errMsg(e),"error");
+    if(btn){ btn.disabled=false; btn.innerHTML="TRIGGER PAYOUT"; }
+  }
+}
+
+function copyRef(link){
+  navigator.clipboard.writeText(link)
+    .then(()=>toast("Referral link copied!","success"))
+    .catch(()=>{
+      const ta=document.createElement("textarea");
+      ta.value=link;ta.style.position="fixed";ta.style.opacity="0";
+      document.body.appendChild(ta);ta.select();document.execCommand("copy");
+      document.body.removeChild(ta);toast("Referral link copied!","success");
+    });
+}
+
+window.connectWallet=connectWallet; window.switchBSC=switchBSC;
+window.setSlippage=setSlippage; window.handleApprove=handleApprove;
+window.handleDeposit=handleDeposit; window.handleClaim=handleClaim;
+window.copyRef=copyRef; window.switchTab=switchTab;
+
+/* ---- Particle Background ---- */
+(function(){
+  const canvas=document.getElementById("particles");
+  const ctx=canvas.getContext("2d");
+  let W,H,particles=[];
+  function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight}
+  resize();window.addEventListener("resize",resize);
+  const colors=["rgba(245,166,35,","rgba(59,130,246,","rgba(168,85,247,","rgba(34,197,94,"];
+  for(let p_i=0;p_i<55;p_i++){
+    particles.push({x:Math.random()*window.innerWidth,y:Math.random()*window.innerHeight,r:Math.random()*1.5+0.3,dx:(Math.random()-.5)*0.3,dy:(Math.random()-.5)*0.3,c:colors[Math.floor(Math.random()*colors.length)],o:Math.random()*0.5+0.1});
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    particles.forEach(p=>{
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=p.c+p.o+")";ctx.fill();
+      p.x+=p.dx;p.y+=p.dy;
+      if(p.x<0||p.x>W)p.dx*=-1;if(p.y<0||p.y>H)p.dy*=-1;
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
+</body>
+</html>
